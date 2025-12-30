@@ -1,4 +1,7 @@
-import { Switch, Route } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
+import { Loader2 } from "lucide-react";
+import { useLocation, Switch, Route } from "wouter";
+import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -6,8 +9,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { useAuth } from "@/hooks/use-auth";
-import { Loader2 } from "lucide-react";
 import Dashboard from "@/pages/dashboard";
 import Quests from "@/pages/quests";
 import Wallet from "@/pages/wallet";
@@ -40,6 +41,12 @@ function Layout() {
     "--sidebar-width-icon": "4rem",
   };
 
+  useEffect(() => {
+    if (!isLoading && !user && location !== "/login") {
+      setLocation("/login");
+    }
+  }, [user, isLoading, location, setLocation]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -48,13 +55,12 @@ function Layout() {
     );
   }
 
-  if (!user && location !== "/login") {
-    setLocation("/login");
-    return null;
-  }
-
   if (location === "/login") {
     return <Landing />;
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (
