@@ -17,12 +17,14 @@ import Admin from "@/pages/admin";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 import Landing from "@/pages/landing";
+import Signup from "@/pages/signup";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/login" component={Landing} />
+      <Route path="/signup" component={Signup} />
       <Route path="/quests" component={Quests} />
       <Route path="/wallet" component={Wallet} />
       <Route path="/roulette" component={Roulette} />
@@ -42,7 +44,7 @@ function Layout() {
   };
 
   useEffect(() => {
-    if (!isLoading && !user && location !== "/login") {
+    if (!isLoading && !user && location !== "/login" && location !== "/signup") {
       setLocation("/login");
     }
   }, [user, isLoading, location, setLocation]);
@@ -57,6 +59,10 @@ function Layout() {
 
   if (location === "/login") {
     return <Landing />;
+  }
+
+  if (location === "/signup") {
+    return <Signup />;
   }
 
   if (!user) {

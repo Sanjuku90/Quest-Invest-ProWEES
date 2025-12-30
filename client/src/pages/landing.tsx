@@ -53,12 +53,14 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a href="/api/login" className="w-full sm:w-auto">
               <Button size="lg" className="rounded-full h-14 px-8 text-lg font-semibold bg-white text-black hover:bg-white/90 shadow-[0_0_20px_rgba(255,255,255,0.3)] w-full">
-                Start Investing <ArrowRight className="ml-2 w-5 h-5" />
+                Se connecter <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </a>
-            <Button variant="ghost" className="rounded-full h-14 px-8 text-lg font-medium text-muted-foreground hover:text-white hover:bg-white/5 w-full sm:w-auto">
-              How it works
-            </Button>
+            <Link href="/signup" className="w-full sm:w-auto">
+              <Button variant="ghost" className="rounded-full h-14 px-8 text-lg font-medium text-muted-foreground hover:text-white hover:bg-white/5 w-full">
+                Créer un compte
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -90,15 +92,15 @@ export default function Landing() {
       <section className="py-24 relative overflow-hidden">
         <div className="absolute inset-0 bg-primary/5" />
         <div className="container mx-auto px-6 relative z-10 text-center">
-          <h2 className="text-4xl font-display font-bold mb-6">Ready to level up your finances?</h2>
+          <h2 className="text-4xl font-display font-bold mb-6">Prêt à passer au niveau supérieur ?</h2>
           <p className="text-muted-foreground mb-10 max-w-xl mx-auto">
-            Join thousands of investors who are making money fun again. No credit card required to start exploring.
+            Rejoignez des milliers d'investisseurs qui redécouvrent la finance. Aucune carte de crédit requise pour commencer.
           </p>
-          <a href="/api/login">
+          <Link href="/signup">
             <Button size="lg" className="rounded-full h-14 px-10 text-lg font-semibold bg-gradient-to-r from-primary to-accent border-0 hover:opacity-90">
-              Create Free Account <ChevronRight className="ml-1 w-5 h-5" />
+              Créer un compte gratuit <ChevronRight className="ml-1 w-5 h-5" />
             </Button>
-          </a>
+          </Link>
         </div>
       </section>
 
