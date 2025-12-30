@@ -1,5 +1,5 @@
 import { 
-  users, type User, type InsertUser,
+  users, type User, type UpsertUser,
   userBalances, type UserBalance,
   quests, type Quest,
   transactions, type Transaction,
@@ -25,7 +25,7 @@ export class DatabaseStorage implements IStorage {
   getUser(id: string): Promise<User | undefined> {
     return authStorage.getUser(id);
   }
-  upsertUser(user: InsertUser): Promise<User> {
+  upsertUser(user: UpsertUser): Promise<User> {
     return authStorage.upsertUser(user);
   }
 
@@ -94,7 +94,7 @@ export class DatabaseStorage implements IStorage {
     .where(eq(transactions.status, "pending"))
     .orderBy(desc(transactions.createdAt));
 
-    return results.map(r => ({ ...r.tx, userEmail: r.email }));
+    return results.map(r => ({ ...r.tx, userEmail: r.email || "" }));
   }
 
   async handleTransactionApproval(txId: number, action: "approve" | "reject"): Promise<void> {

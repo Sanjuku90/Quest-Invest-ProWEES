@@ -119,14 +119,14 @@ export function AppSidebar() {
         <Separator className="mb-4 bg-border/40" />
         <div className="flex items-center gap-3 px-2 py-1">
           <Avatar className="h-9 w-9 border-2 border-primary/20">
-            <AvatarImage src={user?.claims.picture} />
+            <AvatarImage src={user?.profileImageUrl || undefined} />
             <AvatarFallback className="bg-primary/10 text-primary font-bold">
-              {user?.claims.name?.[0] || 'U'}
+              {user?.firstName?.[0] || user?.email?.[0] || 'U'}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col min-w-0 flex-1">
             <span className="text-sm font-semibold truncate text-foreground">
-              {user?.claims.name}
+              {user?.firstName || user?.email}
             </span>
             <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
               Member

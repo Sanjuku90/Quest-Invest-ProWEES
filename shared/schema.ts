@@ -1,6 +1,5 @@
-import { sql } from "drizzle-orm";
 import { pgTable, text, serial, integer, boolean, timestamp, numeric } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -19,13 +18,13 @@ export const userBalances = pgTable("user_balances", {
   questEarnings: numeric("quest_earnings").notNull().default("0"),
   investmentTier: integer("investment_tier").notNull().default(0),
   lastDailyReset: timestamp("last_daily_reset").defaultNow(),
-  role: text("role", { enum: ["user", "admin"] }).notNull().default("user"),
+  role: text("role").notNull().default("user"),
 });
 
 export const quests = pgTable("quests", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull().references(() => users.id),
-  type: text("type", { enum: ["video", "quiz", "link", "referral"] }).notNull(),
+  type: text("type").notNull(),
   description: text("description").notNull(),
   rewardAmount: numeric("reward_amount").notNull(),
   isCompleted: boolean("is_completed").default(false),
@@ -36,10 +35,10 @@ export const quests = pgTable("quests", {
 export const transactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull().references(() => users.id),
-  type: text("type", { enum: ["deposit", "withdrawal", "bonus_unlock", "quest_reward"] }).notNull(),
+  type: text("type").notNull(),
   amount: numeric("amount").notNull(),
-  status: text("status", { enum: ["pending", "completed", "failed"] }).default("completed"),
-  proofImageUrl: text("proof_image_url"), // For admin verification
+  status: text("status").default("completed"),
+  proofImageUrl: text("proof_image_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -88,19 +87,16 @@ export const insertTransactionSchema = createInsertSchema(transactions).omit({
 
 // === EXPLICIT API CONTRACT TYPES ===
 
-// Base types
 export type Quest = typeof quests.$inferSelect;
 export type UserBalance = typeof userBalances.$inferSelect;
 export type Transaction = typeof transactions.$inferSelect;
 
-// Request types
 export type CompleteQuestRequest = { questId: number };
 export type PlayRouletteRequest = { betAmount: number };
 export type DepositRequest = { amount: number; proofImageUrl?: string };
 export type WithdrawRequest = { amount: number };
 export type AdminApproveRequest = { transactionId: number; action: "approve" | "reject" };
 
-// Response types
 export type DashboardStatsResponse = {
   balance: UserBalance;
   completedQuestsCount: number;
@@ -113,3 +109,5 @@ export type RouletteResultResponse = {
   amount: number;
   newBalance: UserBalance;
 };
+
+export type UpsertUser = typeof users.$inferInsert;
