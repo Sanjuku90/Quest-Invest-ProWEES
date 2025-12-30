@@ -1,9 +1,6 @@
 import { z } from 'zod';
 import { insertQuestSchema, quests, userBalances, transactions } from './schema';
 
-// ============================================
-// SHARED ERROR SCHEMAS
-// ============================================
 export const errorSchemas = {
   validation: z.object({
     message: z.string(),
@@ -18,11 +15,11 @@ export const errorSchemas = {
   insufficientFunds: z.object({
     message: z.string(),
   }),
+  unauthorized: z.object({
+    message: z.string(),
+  }),
 };
 
-// ============================================
-// API CONTRACT
-// ============================================
 export const api = {
   dashboard: {
     get: {
@@ -53,7 +50,7 @@ export const api = {
       responses: {
         200: z.custom<typeof quests.$inferSelect>(),
         404: errorSchemas.notFound,
-        400: z.object({ message: z.string() }), // e.g. already completed
+        400: z.object({ message: z.string() }),
       },
     },
   },
@@ -61,14 +58,14 @@ export const api = {
     play: {
       method: 'POST' as const,
       path: '/api/roulette/play',
-      input: z.object({}), // No input needed, it bets the locked bonus
+      input: z.object({}),
       responses: {
         200: z.object({
           won: z.boolean(),
           amount: z.number(),
           newBalance: z.custom<typeof userBalances.$inferSelect>(),
         }),
-        400: z.object({ message: z.string() }), // e.g. no bonus to bet
+        400: z.object({ message: z.string() }),
       },
     },
   },
@@ -76,9 +73,9 @@ export const api = {
     deposit: {
       method: 'POST' as const,
       path: '/api/wallet/deposit',
-      input: z.object({ amount: z.number().positive() }),
+      input: z.object({ amount: z.number().positive(), proofImageUrl: z.string().optional() }),
       responses: {
-        200: z.custom<typeof userBalances.$inferSelect>(),
+        200: z.custom<typeof transactions.$inferSelect>(),
       },
     },
     withdraw: {
@@ -86,7 +83,7 @@ export const api = {
       path: '/api/wallet/withdraw',
       input: z.object({ amount: z.number().positive() }),
       responses: {
-        200: z.custom<typeof userBalances.$inferSelect>(),
+        200: z.custom<typeof transactions.$inferSelect>(),
         400: errorSchemas.insufficientFunds,
       },
     },
@@ -98,11 +95,28 @@ export const api = {
       },
     },
   },
+  admin: {
+    pendingTransactions: {
+      method: 'GET' as const,
+      path: '/api/admin/transactions/pending',
+      responses: {
+        200: z.array(z.custom<typeof transactions.$inferSelect & { userEmail: string }>()),
+        403: errorSchemas.unauthorized,
+      },
+    },
+    approveTransaction: {
+      method: 'POST' as const,
+      path: '/api/admin/transactions/:id/approve',
+      input: z.object({ action: z.enum(["approve", "reject"]) }),
+      responses: {
+        200: z.object({ success: z.boolean() }),
+        403: errorSchemas.unauthorized,
+        404: errorSchemas.notFound,
+      },
+    },
+  },
 };
 
-// ============================================
-// REQUIRED: buildUrl helper
-// ============================================
 export function buildUrl(path: string, params?: Record<string, string | number>): string {
   let url = path;
   if (params) {

@@ -1,208 +1,329 @@
-import { AppLayout } from "@/components/layout/app-layout";
-import { GlassCard } from "@/components/ui/card-stack";
-import { useDashboard } from "@/hooks/use-dashboard";
-import { useTransactions, useDeposit, useWithdraw } from "@/hooks/use-wallet";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { api, buildUrl } from "@shared/routes";
+import { type Transaction, type DashboardStatsResponse } from "@shared/schema";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  Wallet as WalletIcon, 
+  ArrowUpRight, 
+  ArrowDownLeft, 
+  History, 
+  Loader2, 
+  Copy, 
+  CheckCircle2,
+  Image as ImageIcon
+} from "lucide-react";
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ArrowDownLeft, ArrowUpRight, History } from "lucide-react";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 
-// Schema for forms
-const amountSchema = z.object({
-  amount: z.string().transform((val) => Number(val)).pipe(z.number().positive().min(1)),
+const TRC20_ADDRESS = "TN9hjFHzszNdAk5n8Wt39X6KN72WaNmJM1";
+
+const depositSchema = z.object({
+  amount: z.coerce.number().min(1000, "Min 1,000 XOF"),
+  proofImageUrl: z.string().url("Please provide a valid image URL for proof").optional(),
 });
 
-type AmountForm = z.infer<typeof amountSchema>;
+const withdrawSchema = z.object({
+  amount: z.coerce.number().min(1000, "Min 1,000 XOF"),
+});
 
 export default function Wallet() {
-  const { data: dashboard } = useDashboard();
-  const { data: transactions, isLoading: isLoadingHistory } = useTransactions();
-  
-  return (
-    <AppLayout>
-      <div className="space-y-8">
-        <h1 className="text-3xl font-display font-bold">My Wallet</h1>
+  const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Balance Card */}
-          <GlassCard className="lg:col-span-2 p-8" gradient>
-            <div className="flex flex-col h-full justify-between">
-              <div>
-                <p className="text-muted-foreground font-medium mb-2">Total Balance</p>
-                <h2 className="text-5xl font-display font-bold text-white mb-8">
-                  ${dashboard?.balance.mainBalance || "0.00"}
-                </h2>
-                
-                <div className="grid grid-cols-2 gap-4 max-w-md">
-                  <TransactionDialog type="deposit" />
-                  <TransactionDialog type="withdraw" maxAmount={Number(dashboard?.balance.mainBalance)} />
-                </div>
-              </div>
-            </div>
-          </GlassCard>
-
-          {/* Secondary Stats */}
-          <div className="space-y-4">
-            <GlassCard className="p-6">
-              <p className="text-sm text-muted-foreground mb-1">Locked Bonus</p>
-              <p className="text-2xl font-bold text-white">${dashboard?.balance.lockedBonus || "0.00"}</p>
-            </GlassCard>
-            <GlassCard className="p-6">
-              <p className="text-sm text-muted-foreground mb-1">Quest Earnings</p>
-              <p className="text-2xl font-bold text-accent">${dashboard?.balance.questEarnings || "0.00"}</p>
-            </GlassCard>
-            <GlassCard className="p-6">
-              <p className="text-sm text-muted-foreground mb-1">Investment Tier</p>
-              <p className="text-2xl font-bold text-primary">Level {dashboard?.balance.investmentTier || 0}</p>
-            </GlassCard>
-          </div>
-        </div>
-
-        {/* Transaction History */}
-        <div className="mt-12">
-          <div className="flex items-center gap-2 mb-6">
-            <History className="w-5 h-5 text-muted-foreground" />
-            <h3 className="text-xl font-bold">Transaction History</h3>
-          </div>
-
-          <GlassCard className="p-0 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-white/5 text-muted-foreground font-medium border-b border-white/5">
-                  <tr>
-                    <th className="px-6 py-4">Type</th>
-                    <th className="px-6 py-4">Amount</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4 text-right">Date</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {isLoadingHistory ? (
-                    <tr><td colSpan={4} className="px-6 py-8 text-center">Loading...</td></tr>
-                  ) : transactions?.length === 0 ? (
-                    <tr><td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">No transactions yet</td></tr>
-                  ) : (
-                    transactions?.map((tx) => (
-                      <tr key={tx.id} className="hover:bg-white/5 transition-colors">
-                        <td className="px-6 py-4 capitalize font-medium">
-                          <span className={cn(
-                            "inline-flex items-center gap-2",
-                            tx.type === 'deposit' || tx.type === 'bonus_unlock' || tx.type === 'quest_reward' ? 'text-green-400' : 'text-white'
-                          )}>
-                            {tx.type === 'deposit' && <ArrowDownLeft className="w-4 h-4" />}
-                            {tx.type === 'withdrawal' && <ArrowUpRight className="w-4 h-4" />}
-                            {tx.type.replace('_', ' ')}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 font-mono">
-                          {tx.type === 'withdrawal' ? '-' : '+'}${tx.amount}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={cn(
-                            "px-2 py-1 rounded-full text-xs font-medium bg-white/10",
-                            tx.status === 'completed' ? "bg-green-500/20 text-green-400" : 
-                            tx.status === 'pending' ? "bg-yellow-500/20 text-yellow-400" :
-                            "bg-red-500/20 text-red-400"
-                          )}>
-                            {tx.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right text-muted-foreground">
-                          {format(new Date(tx.createdAt || new Date()), "MMM d, yyyy")}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </GlassCard>
-        </div>
-      </div>
-    </AppLayout>
-  );
-}
-
-function TransactionDialog({ type, maxAmount }: { type: 'deposit' | 'withdraw', maxAmount?: number }) {
-  const [open, setOpen] = useState(false);
-  const { mutate: deposit, isPending: isDepositPending } = useDeposit();
-  const { mutate: withdraw, isPending: isWithdrawPending } = useWithdraw();
-  
-  const isPending = isDepositPending || isWithdrawPending;
-  const isDeposit = type === 'deposit';
-
-  const form = useForm<AmountForm>({
-    resolver: zodResolver(amountSchema),
-    defaultValues: { amount: 0 },
+  const { data: stats } = useQuery<DashboardStatsResponse>({
+    queryKey: [api.dashboard.get.path],
   });
 
-  const onSubmit = (data: AmountForm) => {
-    const fn = isDeposit ? deposit : withdraw;
-    fn({ amount: data.amount }, {
-      onSuccess: () => {
-        setOpen(false);
-        form.reset();
-      }
-    });
+  const { data: history, isLoading: historyLoading } = useQuery<Transaction[]>({
+    queryKey: [api.wallet.history.path],
+  });
+
+  const depositForm = useForm<z.infer<typeof depositSchema>>({
+    resolver: zodResolver(depositSchema),
+    defaultValues: { amount: 10000, proofImageUrl: "" },
+  });
+
+  const withdrawForm = useForm<z.infer<typeof withdrawSchema>>({
+    resolver: zodResolver(withdrawSchema),
+    defaultValues: { amount: 10000 },
+  });
+
+  const depositMutation = useMutation({
+    mutationFn: async (values: z.infer<typeof depositSchema>) => {
+      const res = await apiRequest("POST", api.wallet.deposit.path, values);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.wallet.history.path] });
+      toast({ title: "Request Sent", description: "Your deposit is pending admin validation." });
+      depositForm.reset();
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const withdrawMutation = useMutation({
+    mutationFn: async (values: z.infer<typeof withdrawSchema>) => {
+      const res = await apiRequest("POST", api.wallet.withdraw.path, values);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.wallet.history.path] });
+      queryClient.invalidateQueries({ queryKey: [api.dashboard.get.path] });
+      toast({ title: "Request Sent", description: "Your withdrawal is pending admin validation." });
+      withdrawForm.reset();
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const copyAddress = () => {
+    navigator.clipboard.writeText(TRC20_ADDRESS);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast({ title: "Copied!", description: "USDT TRC20 address copied to clipboard." });
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button 
-          variant={isDeposit ? "default" : "outline"}
-          className={cn(
-            "w-full h-12 rounded-xl font-semibold",
-            isDeposit ? "bg-primary text-white hover:bg-primary/90" : "border-white/20 hover:bg-white/10"
-          )}
-        >
-          {isDeposit ? "Deposit" : "Withdraw"}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="bg-card border-white/10 text-white sm:rounded-2xl">
-        <DialogHeader>
-          <DialogTitle>{isDeposit ? "Deposit Funds" : "Withdraw Funds"}</DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Amount ($)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      {...field} 
-                      type="number" 
-                      placeholder="0.00" 
-                      className="bg-background/50 border-white/10 h-12 text-lg" 
+    <div className="space-y-8 max-w-5xl mx-auto pb-12">
+      <div className="flex items-end justify-between">
+        <div>
+          <h1 className="text-4xl font-black tracking-tighter">FINANCIAL CENTER</h1>
+          <p className="text-muted-foreground font-medium">Manage your capital and rewards.</p>
+        </div>
+        <div className="hidden md:block">
+          <Badge variant="outline" className="text-[10px] font-black tracking-[0.2em] uppercase py-1 px-3 border-primary/20 bg-primary/5 text-primary">
+            Secure Transactions
+          </Badge>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="md:col-span-2 border-primary/20 shadow-2xl bg-card/40 backdrop-blur-md overflow-hidden relative group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-primary/20 transition-colors" />
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <WalletIcon className="h-6 w-6 text-primary" />
+              Main Portfolio
+            </CardTitle>
+            <CardDescription>Available capital for investment and gaming.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-5xl font-black tracking-tight mb-8">
+              {Number(stats?.balance?.mainBalance || 0).toLocaleString()} <span className="text-xl text-primary font-bold">XOF</span>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-background/50 border border-border/50">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Quest Earnings</p>
+                <p className="text-xl font-black text-green-500">{Number(stats?.balance?.questEarnings || 0).toLocaleString()} <span className="text-[10px]">XOF</span></p>
+              </div>
+              <div className="p-4 rounded-xl bg-background/50 border border-border/50">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Locked Bonus</p>
+                <p className="text-xl font-black text-yellow-500">{Number(stats?.balance?.lockedBonus || 0).toLocaleString()} <span className="text-[10px]">XOF</span></p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/40 shadow-xl bg-card/20 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">Payment Info</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-3">
+              <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">USDT TRC20 Address</p>
+              <div className="flex items-center gap-2">
+                <code className="text-[11px] font-mono flex-1 break-all bg-background/80 p-2 rounded border border-border/40">
+                  {TRC20_ADDRESS}
+                </code>
+                <Button size="icon" variant="ghost" onClick={copyAddress} className="h-8 w-8 text-primary">
+                  {copied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-relaxed italic">
+                Send USDT and provide the screenshot/URL for validation.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs defaultValue="deposit" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 h-14 bg-card/50 p-1 rounded-2xl border border-border/40">
+          <TabsTrigger value="deposit" className="rounded-xl font-black text-xs tracking-widest uppercase data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">
+            <ArrowDownLeft className="mr-2 h-4 w-4" /> Deposit
+          </TabsTrigger>
+          <TabsTrigger value="withdraw" className="rounded-xl font-black text-xs tracking-widest uppercase data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground transition-all">
+            <ArrowUpRight className="mr-2 h-4 w-4" /> Withdraw
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="deposit" className="mt-6">
+          <Card className="border-primary/20 shadow-xl overflow-hidden">
+            <CardHeader className="bg-primary/5 border-b border-primary/10">
+              <CardTitle>Inbound Request</CardTitle>
+              <CardDescription>40% bonus applies to your FIRST deposit!</CardDescription>
+            </CardHeader>
+            <CardContent className="p-8">
+              <Form {...depositForm}>
+                <form onSubmit={depositForm.handleSubmit((v) => depositMutation.mutate(v))} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <FormField
+                      control={depositForm.control}
+                      name="amount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-black uppercase tracking-widest">Amount (XOF)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="10000" type="number" {...field} className="h-12 text-lg font-bold bg-background/50" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {type === 'withdraw' && maxAmount !== undefined && (
-              <p className="text-xs text-muted-foreground">Available: ${maxAmount}</p>
+                    <FormField
+                      control={depositForm.control}
+                      name="proofImageUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-black uppercase tracking-widest">Payment Proof URL</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://imgur.com/..." {...field} className="h-12 bg-background/50" />
+                          </FormControl>
+                          <FormDescription className="text-[10px]">Upload to imgur/postimages and paste link.</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <Button 
+                    type="submit" 
+                    className="w-full h-14 text-lg font-black uppercase tracking-[0.2em] shadow-lg shadow-primary/20"
+                    disabled={depositMutation.isPending}
+                  >
+                    {depositMutation.isPending ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <WalletIcon className="mr-2 h-5 w-5" />}
+                    Confirm Deposit Request
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="withdraw" className="mt-6">
+          <Card className="border-destructive/20 shadow-xl overflow-hidden">
+            <CardHeader className="bg-destructive/5 border-b border-destructive/10">
+              <CardTitle>Outbound Request</CardTitle>
+              <CardDescription>Funds will be sent to your registered USDT address.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-8">
+              <Form {...withdrawForm}>
+                <form onSubmit={withdrawForm.handleSubmit((v) => withdrawMutation.mutate(v))} className="space-y-6">
+                  <FormField
+                    control={withdrawForm.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-black uppercase tracking-widest">Amount (XOF)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="10000" type="number" {...field} className="h-12 text-lg font-bold bg-background/50 border-destructive/20 focus-visible:ring-destructive" />
+                        </FormControl>
+                        <FormDescription className="flex items-center gap-1 text-[10px]">
+                          Available: {(Number(stats?.balance?.mainBalance || 0) + Number(stats?.balance?.questEarnings || 0)).toLocaleString()} XOF
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button 
+                    type="submit" 
+                    variant="destructive"
+                    className="w-full h-14 text-lg font-black uppercase tracking-[0.2em] shadow-lg shadow-destructive/20"
+                    disabled={withdrawMutation.isPending}
+                  >
+                    {withdrawMutation.isPending ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <ArrowUpRight className="mr-2 h-5 w-5" />}
+                    Request Withdrawal
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      <Card className="border-border/40 shadow-xl bg-card/10 backdrop-blur-sm">
+        <CardHeader className="pb-4 border-b border-border/40">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-black flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" />
+              Recent Operations
+            </CardTitle>
+            <Badge variant="outline" className="text-[9px] font-bold tracking-widest uppercase">Live Log</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="divide-y divide-border/40">
+            {historyLoading ? (
+              <div className="flex items-center justify-center p-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : !history || history.length === 0 ? (
+              <div className="p-12 text-center text-muted-foreground italic text-sm">
+                No transactions recorded yet.
+              </div>
+            ) : (
+              history.map((tx) => (
+                <div key={tx.id} className="flex items-center justify-between p-5 hover:bg-primary/[0.02] transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-2 rounded-full ${
+                      tx.type === 'deposit' ? 'bg-green-500/10 text-green-500' : 
+                      tx.type === 'withdrawal' ? 'bg-orange-500/10 text-orange-500' :
+                      'bg-primary/10 text-primary'
+                    }`}>
+                      {tx.type === 'deposit' ? <ArrowDownLeft className="h-4 w-4" /> : 
+                       tx.type === 'withdrawal' ? <ArrowUpRight className="h-4 w-4" /> : 
+                       <TrendingUp className="h-4 w-4" />}
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm tracking-tight capitalize">{tx.type.replace('_', ' ')}</p>
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                        {new Date(tx.createdAt!).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right flex flex-col items-end gap-1">
+                    <p className={`font-black text-base tracking-tighter ${
+                      tx.type === 'deposit' || tx.type.includes('reward') ? 'text-green-500' : 'text-orange-500'
+                    }`}>
+                      {tx.type === 'deposit' || tx.type.includes('reward') ? '+' : '-'}{Number(tx.amount).toLocaleString()}
+                    </p>
+                    <Badge variant="outline" className={`text-[8px] font-black uppercase px-2 py-0 border-none rounded-full h-4 ${
+                      tx.status === 'completed' ? 'bg-green-500/10 text-green-500' : 
+                      tx.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500' : 
+                      'bg-destructive/10 text-destructive'
+                    }`}>
+                      {tx.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))
             )}
-            <Button 
-              type="submit" 
-              className="w-full h-12 rounded-xl text-lg font-semibold bg-primary hover:bg-primary/90"
-              disabled={isPending}
-            >
-              {isPending ? "Processing..." : `Confirm ${type === 'deposit' ? 'Deposit' : 'Withdrawal'}`}
-            </Button>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
+
+import { TrendingUp } from "lucide-react";

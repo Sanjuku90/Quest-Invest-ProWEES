@@ -4,7 +4,8 @@ import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { userBalances } from "@shared/schema"; // Imported for types if needed, but storage handles logic
+import { transactions, userBalances } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -13,6 +14,15 @@ export async function registerRoutes(
   // Setup Auth first
   await setupAuth(app);
   registerAuthRoutes(app);
+
+  // Helper for admin check
+  const isAdmin = async (req: any, res: any, next: any) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const balance = await storage.getUserBalance(userId);
+    if (balance.role !== 'admin') return res.status(403).json({ message: "Admin only" });
+    next();
+  };
 
   // === API ROUTES ===
 
@@ -24,11 +34,9 @@ export async function registerRoutes(
     const balance = await storage.getUserBalance(userId);
     const quests = await storage.getUserQuests(userId);
     
-    // Calculate stats
     const completedQuestsCount = quests.filter(q => q.isCompleted).length;
     const totalQuestsCount = quests.length;
     
-    // Determine next reset (e.g., midnight UTC)
     const now = new Date();
     const tomorrow = new Date(now);
     tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
@@ -86,11 +94,11 @@ export async function registerRoutes(
     
     try {
       const input = api.wallet.deposit.input.parse(req.body);
-      const balance = await storage.deposit(userId, input.amount);
-      res.json(balance);
+      const tx = await storage.createDepositRequest(userId, input.amount, input.proofImageUrl);
+      res.json(tx);
     } catch (err) {
       if (err instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid amount" });
+        return res.status(400).json({ message: "Invalid input" });
       }
       res.status(500).json({ message: "Internal server error" });
     }
@@ -102,8 +110,8 @@ export async function registerRoutes(
 
     try {
       const input = api.wallet.withdraw.input.parse(req.body);
-      const balance = await storage.withdraw(userId, input.amount);
-      res.json(balance);
+      const tx = await storage.createWithdrawalRequest(userId, input.amount);
+      res.json(tx);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid amount" });
@@ -122,8 +130,24 @@ export async function registerRoutes(
     res.json(history);
   });
 
+  // Admin Routes
+  app.get(api.admin.pendingTransactions.path, isAdmin, async (req, res) => {
+    const txs = await storage.getPendingTransactions();
+    res.json(txs);
+  });
+
+  app.post(api.admin.approveTransaction.path, isAdmin, async (req, res) => {
+    const txId = Number(req.params.id);
+    const { action } = api.admin.approveTransaction.input.parse(req.body);
+    
+    try {
+      await storage.handleTransactionApproval(txId, action);
+      res.json({ success: true });
+    } catch (error: any) {
+      if (error.message === "Transaction not found") return res.status(404).json({ message: "Not found" });
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   return httpServer;
 }
-
-// Seed function for new users or daily reset logic would go here
-// For MVP, we'll initialize balances/quests in storage.getUserBalance lazily if not exists

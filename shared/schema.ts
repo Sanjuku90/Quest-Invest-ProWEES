@@ -17,8 +17,9 @@ export const userBalances = pgTable("user_balances", {
   mainBalance: numeric("main_balance").notNull().default("0"),
   lockedBonus: numeric("locked_bonus").notNull().default("0"),
   questEarnings: numeric("quest_earnings").notNull().default("0"),
-  investmentTier: integer("investment_tier").notNull().default(0), // 0 to 4 based on investment
+  investmentTier: integer("investment_tier").notNull().default(0),
   lastDailyReset: timestamp("last_daily_reset").defaultNow(),
+  role: text("role", { enum: ["user", "admin"] }).notNull().default("user"),
 });
 
 export const quests = pgTable("quests", {
@@ -38,6 +39,7 @@ export const transactions = pgTable("transactions", {
   type: text("type", { enum: ["deposit", "withdrawal", "bonus_unlock", "quest_reward"] }).notNull(),
   amount: numeric("amount").notNull(),
   status: text("status", { enum: ["pending", "completed", "failed"] }).default("completed"),
+  proofImageUrl: text("proof_image_url"), // For admin verification
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -93,20 +95,21 @@ export type Transaction = typeof transactions.$inferSelect;
 
 // Request types
 export type CompleteQuestRequest = { questId: number };
-export type PlayRouletteRequest = { betAmount: number }; // In this case, usually full bonus is bet
-export type DepositRequest = { amount: number };
+export type PlayRouletteRequest = { betAmount: number };
+export type DepositRequest = { amount: number; proofImageUrl?: string };
 export type WithdrawRequest = { amount: number };
+export type AdminApproveRequest = { transactionId: number; action: "approve" | "reject" };
 
 // Response types
 export type DashboardStatsResponse = {
   balance: UserBalance;
   completedQuestsCount: number;
   totalQuestsCount: number;
-  nextResetTime: string; // ISO string
+  nextResetTime: string;
 };
 
 export type RouletteResultResponse = {
   won: boolean;
-  amount: number; // Amount unlocked/won
+  amount: number;
   newBalance: UserBalance;
 };
