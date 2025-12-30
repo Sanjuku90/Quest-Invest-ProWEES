@@ -15,10 +15,13 @@ import Roulette from "@/pages/roulette";
 import Admin from "@/pages/admin";
 import { ThemeToggle } from "@/components/theme-toggle";
 
+import Landing from "@/pages/landing";
+
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
+      <Route path="/login" component={Landing} />
       <Route path="/quests" component={Quests} />
       <Route path="/wallet" component={Wallet} />
       <Route path="/roulette" component={Roulette} />
@@ -30,6 +33,7 @@ function Router() {
 
 function Layout() {
   const { user, isLoading } = useAuth();
+  const [location, setLocation] = useLocation();
   
   const style = {
     "--sidebar-width": "16rem",
@@ -44,16 +48,13 @@ function Layout() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 text-center">
-        <h1 className="text-4xl font-bold mb-4 text-primary tracking-tighter">QuestInvest Pro</h1>
-        <p className="text-muted-foreground mb-8">Gamified Investment Platform</p>
-        <p className="text-sm border p-3 rounded-lg bg-card border-primary/20">
-          Please login via the Replit Auth banner above to access your dashboard.
-        </p>
-      </div>
-    );
+  if (!user && location !== "/login") {
+    setLocation("/login");
+    return null;
+  }
+
+  if (location === "/login") {
+    return <Landing />;
   }
 
   return (

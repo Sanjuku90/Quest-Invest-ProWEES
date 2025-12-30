@@ -73,7 +73,9 @@ export class DatabaseStorage implements IStorage {
   async createWithdrawalRequest(userId: string, amount: number): Promise<Transaction> {
     const balance = await this.getUserBalance(userId);
     const available = Number(balance.mainBalance) + Number(balance.questEarnings);
-    if (available < amount) throw new Error("Insufficient funds");
+    if (available < amount) {
+      throw new Error("Insufficient funds");
+    }
 
     const [tx] = await db.insert(transactions).values({
       userId,

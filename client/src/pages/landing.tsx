@@ -1,8 +1,19 @@
 import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { ArrowRight, ChevronRight, BarChart3, ShieldCheck, Trophy } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { useEffect } from "react";
 
 export default function Landing() {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (user) {
+      setLocation("/");
+    }
+  }, [user, setLocation]);
+
   return (
     <div className="min-h-screen bg-black text-white selection:bg-primary/30">
       {/* Nav */}
@@ -13,11 +24,11 @@ export default function Landing() {
           </div>
           <span className="text-gradient">QuestInvest</span>
         </div>
-        <Link href="/api/login">
+        <a href="/api/login">
           <Button variant="outline" className="border-white/20 hover:bg-white/10 rounded-full px-6">
             Log In
           </Button>
-        </Link>
+        </a>
       </nav>
 
       {/* Hero */}
@@ -40,11 +51,11 @@ export default function Landing() {
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/api/login">
-              <Button size="lg" className="rounded-full h-14 px-8 text-lg font-semibold bg-white text-black hover:bg-white/90 shadow-[0_0_20px_rgba(255,255,255,0.3)] w-full sm:w-auto">
+            <a href="/api/login" className="w-full sm:w-auto">
+              <Button size="lg" className="rounded-full h-14 px-8 text-lg font-semibold bg-white text-black hover:bg-white/90 shadow-[0_0_20px_rgba(255,255,255,0.3)] w-full">
                 Start Investing <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
-            </Link>
+            </a>
             <Button variant="ghost" className="rounded-full h-14 px-8 text-lg font-medium text-muted-foreground hover:text-white hover:bg-white/5 w-full sm:w-auto">
               How it works
             </Button>
@@ -83,11 +94,11 @@ export default function Landing() {
           <p className="text-muted-foreground mb-10 max-w-xl mx-auto">
             Join thousands of investors who are making money fun again. No credit card required to start exploring.
           </p>
-          <Link href="/api/login">
+          <a href="/api/login">
             <Button size="lg" className="rounded-full h-14 px-10 text-lg font-semibold bg-gradient-to-r from-primary to-accent border-0 hover:opacity-90">
               Create Free Account <ChevronRight className="ml-1 w-5 h-5" />
             </Button>
-          </Link>
+          </a>
         </div>
       </section>
 
