@@ -13,7 +13,7 @@ const icons = {
   referral: Users,
 };
 
-export function QuestCard({ quest }: { quest: Quest }) {
+export function QuestCard({ quest, disabled }: { quest: Quest; disabled?: boolean }) {
   const { mutate: complete, isPending } = useCompleteQuest();
   const Icon = icons[quest.type as keyof typeof icons] || Link2;
 
@@ -25,7 +25,8 @@ export function QuestCard({ quest }: { quest: Quest }) {
     >
       <GlassCard className={cn(
         "group h-full flex flex-col justify-between",
-        quest.isCompleted ? "opacity-60 grayscale" : "hover:border-primary/50"
+        quest.isCompleted ? "opacity-60 grayscale" : "hover:border-primary/50",
+        disabled && !quest.isCompleted && "grayscale opacity-50"
       )}>
         <div>
           <div className="flex justify-between items-start mb-4">
@@ -53,7 +54,7 @@ export function QuestCard({ quest }: { quest: Quest }) {
 
         <Button
           onClick={() => complete(quest.id)}
-          disabled={quest.isCompleted || isPending}
+          disabled={quest.isCompleted || isPending || disabled}
           className={cn(
             "w-full rounded-xl h-12 font-semibold transition-all duration-300",
             quest.isCompleted 

@@ -170,11 +170,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async completeQuest(userId: string, questId: number): Promise<Quest> {
+    const balance = await this.getUserBalance(userId);
+    if (Number(balance.mainBalance) <= 0) {
+      throw new Error("Investment required to complete quests");
+    }
+
     const [quest] = await db.select().from(quests).where(and(eq(quests.id, questId), eq(quests.userId, userId)));
     if (!quest || quest.isCompleted) throw new Error("Quest not found or completed");
 
     const [updated] = await db.update(quests).set({ isCompleted: true, completedAt: new Date() }).where(eq(quests.id, questId)).returning();
-    const balance = await this.getUserBalance(userId);
     await db.update(userBalances).set({
       questEarnings: (Number(balance.questEarnings) + Number(quest.rewardAmount)).toString()
     }).where(eq(userBalances.userId, userId));
