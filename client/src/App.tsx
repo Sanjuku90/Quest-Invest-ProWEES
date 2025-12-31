@@ -22,7 +22,8 @@ import Signup from "@/pages/signup";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
+      <Route path="/" component={Landing} />
+      <Route path="/dashboard" component={Dashboard} />
       <Route path="/login" component={Landing} />
       <Route path="/signup" component={Signup} />
       <Route path="/quests" component={Quests} />
