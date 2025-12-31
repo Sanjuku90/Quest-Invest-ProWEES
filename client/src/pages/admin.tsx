@@ -5,7 +5,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle, XCircle, User, Image as ImageIcon, History } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, User, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -81,7 +81,7 @@ export default function Admin() {
                                 <span className="font-medium">{tx.userEmail}</span>
                               </div>
                               <div className="text-2xl font-black text-foreground">
-                                {Number(tx.amount).toLocaleString()} <span className="text-xs font-bold text-primary">XOF</span>
+                                ${Number(tx.amount).toLocaleString()} <span className="text-xs font-bold text-primary">USD</span>
                               </div>
                             </div>
                             <Badge 
@@ -97,27 +97,6 @@ export default function Admin() {
                             <span>•</span>
                             <span>{new Date(tx.createdAt!).toLocaleString()}</span>
                           </div>
-
-                          {tx.proofImageUrl && (
-                            <div className="space-y-2">
-                              <span className="text-xs font-bold flex items-center gap-1">
-                                <ImageIcon className="h-3 w-3" />
-                                PROOF IMAGE
-                              </span>
-                              <a 
-                                href={tx.proofImageUrl} 
-                                target="_blank" 
-                                rel="noreferrer"
-                                className="block rounded-lg overflow-hidden border border-border/50 hover:opacity-80 transition-opacity max-w-[200px]"
-                              >
-                                <img 
-                                  src={tx.proofImageUrl} 
-                                  alt="Payment Proof" 
-                                  className="w-full h-auto object-cover"
-                                />
-                              </a>
-                            </div>
-                          )}
                         </div>
 
                         <div className="flex md:flex-col gap-2 justify-center">

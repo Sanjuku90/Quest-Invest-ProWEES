@@ -12,7 +12,7 @@ import { authStorage, type IAuthStorage } from "./replit_integrations/auth/stora
 export interface IStorage extends IAuthStorage {
   getUserBalance(userId: string): Promise<UserBalance>;
   getTransactionHistory(userId: string): Promise<Transaction[]>;
-  createDepositRequest(userId: string, amount: number, proofImageUrl?: string): Promise<Transaction>;
+  createDepositRequest(userId: string, amount: number): Promise<Transaction>;
   createWithdrawalRequest(userId: string, amount: number): Promise<Transaction>;
   getPendingTransactions(): Promise<(Transaction & { userEmail: string })[]>;
   handleTransactionApproval(txId: number, action: "approve" | "reject"): Promise<void>;
@@ -77,7 +77,7 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(transactions).where(eq(transactions.userId, userId)).orderBy(desc(transactions.createdAt));
   }
 
-  async createDepositRequest(userId: string, amount: number, proofImageUrl?: string): Promise<Transaction> {
+  async createDepositRequest(userId: string, amount: number): Promise<Transaction> {
     if (amount < 20) {
       throw new Error("Minimum deposit amount is $20");
     }
@@ -86,7 +86,6 @@ export class DatabaseStorage implements IStorage {
       type: "deposit",
       amount: amount.toString(),
       status: "pending",
-      proofImageUrl,
     }).returning();
     return tx;
   }

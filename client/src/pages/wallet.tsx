@@ -27,12 +27,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 const TRC20_ADDRESS = "TN9hjFHzszNdAk5n8Wt39X6KN72WaNmJM1";
 
 const depositSchema = z.object({
-  amount: z.coerce.number().min(20, "Le minimum de dépôt est 20$"),
-  proofImageUrl: z.string().url("Veuillez fournir une URL d'image valide pour la preuve").optional(),
+  amount: z.coerce.number().min(20, "Minimum deposit is $20"),
 });
 
 const withdrawSchema = z.object({
-  amount: z.coerce.number().min(50, "Le minimum de retrait est 50$"),
+  amount: z.coerce.number().min(50, "Minimum withdrawal is $50"),
 });
 
 export default function Wallet() {
@@ -49,12 +48,12 @@ export default function Wallet() {
 
   const depositForm = useForm<z.infer<typeof depositSchema>>({
     resolver: zodResolver(depositSchema),
-    defaultValues: { amount: 10000, proofImageUrl: "" },
+    defaultValues: { amount: 100 },
   });
 
   const withdrawForm = useForm<z.infer<typeof withdrawSchema>>({
     resolver: zodResolver(withdrawSchema),
-    defaultValues: { amount: 10000 },
+    defaultValues: { amount: 100 },
   });
 
   const depositMutation = useMutation({
@@ -121,16 +120,16 @@ export default function Wallet() {
           </CardHeader>
           <CardContent>
             <div className="text-5xl font-black tracking-tight mb-8">
-              {Number(stats?.balance?.mainBalance || 0).toLocaleString()} <span className="text-xl text-primary font-bold">XOF</span>
+              {Number(stats?.balance?.mainBalance || 0).toLocaleString()} <span className="text-xl text-primary font-bold">USD</span>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 rounded-xl bg-background/50 border border-border/50">
                 <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Quest Earnings</p>
-                <p className="text-xl font-black text-green-500">{Number(stats?.balance?.questEarnings || 0).toLocaleString()} <span className="text-[10px]">XOF</span></p>
+                <p className="text-xl font-black text-green-500">${Number(stats?.balance?.questEarnings || 0).toLocaleString()}</p>
               </div>
               <div className="p-4 rounded-xl bg-background/50 border border-border/50">
                 <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Locked Bonus</p>
-                <p className="text-xl font-black text-yellow-500">{Number(stats?.balance?.lockedBonus || 0).toLocaleString()} <span className="text-[10px]">XOF</span></p>
+                <p className="text-xl font-black text-yellow-500">${Number(stats?.balance?.lockedBonus || 0).toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
@@ -178,30 +177,17 @@ export default function Wallet() {
             <CardContent className="p-8">
               <Form {...depositForm}>
                 <form onSubmit={depositForm.handleSubmit((v) => depositMutation.mutate(v))} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="grid grid-cols-1 gap-8">
                     <FormField
                       control={depositForm.control}
                       name="amount"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-black uppercase tracking-widest">Amount (XOF)</FormLabel>
+                          <FormLabel className="text-xs font-black uppercase tracking-widest">Amount (USD)</FormLabel>
                           <FormControl>
-                            <Input placeholder="10000" type="number" {...field} className="h-12 text-lg font-bold bg-background/50" />
+                            <Input placeholder="100" type="number" {...field} className="h-12 text-lg font-bold bg-background/50" />
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={depositForm.control}
-                      name="proofImageUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs font-black uppercase tracking-widest">Payment Proof URL</FormLabel>
-                          <FormControl>
-                            <Input placeholder="https://imgur.com/..." {...field} className="h-12 bg-background/50" />
-                          </FormControl>
-                          <FormDescription className="text-[10px]">Upload to imgur/postimages and paste link.</FormDescription>
+                          <FormDescription className="text-[10px]">Minimum deposit is $20.</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -235,12 +221,12 @@ export default function Wallet() {
                     name="amount"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-black uppercase tracking-widest">Amount (XOF)</FormLabel>
+                        <FormLabel className="text-xs font-black uppercase tracking-widest">Amount (USD)</FormLabel>
                         <FormControl>
-                          <Input placeholder="10000" type="number" {...field} className="h-12 text-lg font-bold bg-background/50 border-destructive/20 focus-visible:ring-destructive" />
+                          <Input placeholder="100" type="number" {...field} className="h-12 text-lg font-bold bg-background/50 border-destructive/20 focus-visible:ring-destructive" />
                         </FormControl>
                         <FormDescription className="flex items-center gap-1 text-[10px]">
-                          Available: {(Number(stats?.balance?.mainBalance || 0) + Number(stats?.balance?.questEarnings || 0)).toLocaleString()} XOF
+                          Available: ${(Number(stats?.balance?.mainBalance || 0) + Number(stats?.balance?.questEarnings || 0)).toLocaleString()} USD | Min: $50
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -306,7 +292,7 @@ export default function Wallet() {
                     <p className={`font-black text-base tracking-tighter ${
                       tx.type === 'deposit' || tx.type.includes('reward') ? 'text-green-500' : 'text-orange-500'
                     }`}>
-                      {tx.type === 'deposit' || tx.type.includes('reward') ? '+' : '-'}{Number(tx.amount).toLocaleString()}
+                      {tx.type === 'deposit' || tx.type.includes('reward') ? '+$' : '-$'}{Number(tx.amount).toLocaleString()}
                     </p>
                     <Badge variant="outline" className={`text-[8px] font-black uppercase px-2 py-0 border-none rounded-full h-4 ${
                       tx.status === 'completed' ? 'bg-green-500/10 text-green-500' : 

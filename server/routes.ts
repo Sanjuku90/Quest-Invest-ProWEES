@@ -94,7 +94,7 @@ export async function registerRoutes(
     
     try {
       const input = api.wallet.deposit.input.parse(req.body);
-      const tx = await storage.createDepositRequest(userId, input.amount, input.proofImageUrl);
+      const tx = await storage.createDepositRequest(userId, input.amount);
       res.json(tx);
     } catch (err) {
       if (err instanceof z.ZodError) {

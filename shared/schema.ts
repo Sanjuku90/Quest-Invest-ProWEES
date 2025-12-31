@@ -38,7 +38,6 @@ export const transactions = pgTable("transactions", {
   type: text("type").notNull(),
   amount: numeric("amount").notNull(),
   status: text("status").default("completed"),
-  proofImageUrl: text("proof_image_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -93,7 +92,7 @@ export type Transaction = typeof transactions.$inferSelect;
 
 export type CompleteQuestRequest = { questId: number };
 export type PlayRouletteRequest = { betAmount: number };
-export type DepositRequest = { amount: number; proofImageUrl?: string };
+export type DepositRequest = { amount: number };
 export type WithdrawRequest = { amount: number };
 export type AdminApproveRequest = { transactionId: number; action: "approve" | "reject" };
 
