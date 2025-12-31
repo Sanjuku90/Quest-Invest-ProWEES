@@ -27,12 +27,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 const TRC20_ADDRESS = "TN9hjFHzszNdAk5n8Wt39X6KN72WaNmJM1";
 
 const depositSchema = z.object({
-  amount: z.coerce.number().min(1000, "Min 1,000 XOF"),
-  proofImageUrl: z.string().url("Please provide a valid image URL for proof").optional(),
+  amount: z.coerce.number().min(20, "Le minimum de dépôt est 20$"),
+  proofImageUrl: z.string().url("Veuillez fournir une URL d'image valide pour la preuve").optional(),
 });
 
 const withdrawSchema = z.object({
-  amount: z.coerce.number().min(1000, "Min 1,000 XOF"),
+  amount: z.coerce.number().min(50, "Le minimum de retrait est 50$"),
 });
 
 export default function Wallet() {

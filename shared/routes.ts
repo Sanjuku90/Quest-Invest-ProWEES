@@ -73,7 +73,7 @@ export const api = {
     deposit: {
       method: 'POST' as const,
       path: '/api/wallet/deposit',
-      input: z.object({ amount: z.number().positive(), proofImageUrl: z.string().optional() }),
+      input: z.object({ amount: z.number().min(20), proofImageUrl: z.string().optional() }),
       responses: {
         200: z.custom<typeof transactions.$inferSelect>(),
       },
@@ -81,7 +81,7 @@ export const api = {
     withdraw: {
       method: 'POST' as const,
       path: '/api/wallet/withdraw',
-      input: z.object({ amount: z.number().positive() }),
+      input: z.object({ amount: z.number().min(50) }),
       responses: {
         200: z.custom<typeof transactions.$inferSelect>(),
         400: errorSchemas.insufficientFunds,

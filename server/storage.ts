@@ -78,6 +78,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createDepositRequest(userId: string, amount: number, proofImageUrl?: string): Promise<Transaction> {
+    if (amount < 20) {
+      throw new Error("Minimum deposit amount is $20");
+    }
     const [tx] = await db.insert(transactions).values({
       userId,
       type: "deposit",
@@ -89,6 +92,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createWithdrawalRequest(userId: string, amount: number): Promise<Transaction> {
+    if (amount < 50) {
+      throw new Error("Minimum withdrawal amount is $50");
+    }
     const balance = await this.getUserBalance(userId);
     const available = Number(balance.mainBalance) + Number(balance.questEarnings);
     if (available < amount) {
