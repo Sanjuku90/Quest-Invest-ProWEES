@@ -73,7 +73,7 @@ export const api = {
     deposit: {
       method: 'POST' as const,
       path: '/api/wallet/deposit',
-      input: z.object({ amount: z.number().min(20), proofImageUrl: z.string().optional() }),
+      input: z.object({ amount: z.number().min(20) }),
       responses: {
         200: z.custom<typeof transactions.$inferSelect>(),
       },
