@@ -119,6 +119,7 @@ export class DatabaseStorage implements IStorage {
     .where(eq(transactions.status, "pending"))
     .orderBy(desc(transactions.createdAt));
 
+    console.log("Pending transactions found:", results.length);
     return results.map(r => ({ ...r.tx, userEmail: r.email }));
   }
 
