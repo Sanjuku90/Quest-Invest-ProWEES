@@ -18,7 +18,7 @@ export async function registerRoutes(
   // Helper for admin check
   const isAdmin = async (req: any, res: any, next: any) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = req.user.claims.sub;
+    const userId = req.user.id;
     const balance = await storage.getUserBalance(userId);
     if (balance.role !== 'admin') return res.status(403).json({ message: "Admin only" });
     next();
@@ -29,7 +29,7 @@ export async function registerRoutes(
   // Dashboard
   app.get(api.dashboard.get.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    const userId = (req.user as any).id;
 
     const balance = await storage.getUserBalance(userId);
     const quests = await storage.getUserQuests(userId);
@@ -53,14 +53,14 @@ export async function registerRoutes(
   // Quests
   app.get(api.quests.list.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    const userId = (req.user as any).id;
     const quests = await storage.getUserQuests(userId);
     res.json(quests);
   });
 
   app.post(api.quests.complete.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    const userId = (req.user as any).id;
     const questId = Number(req.params.id);
 
     try {
@@ -76,7 +76,7 @@ export async function registerRoutes(
   // Roulette
   app.post(api.roulette.play.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    const userId = (req.user as any).id;
 
     try {
       const result = await storage.playRoulette(userId);
@@ -90,7 +90,7 @@ export async function registerRoutes(
   // Wallet
   app.post(api.wallet.deposit.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    const userId = (req.user as any).id;
     
     try {
       const input = api.wallet.deposit.input.parse(req.body);
@@ -106,7 +106,7 @@ export async function registerRoutes(
 
   app.post(api.wallet.withdraw.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    const userId = (req.user as any).id;
 
     try {
       const input = api.wallet.withdraw.input.parse(req.body);
@@ -125,7 +125,7 @@ export async function registerRoutes(
 
   app.get(api.wallet.history.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    const userId = (req.user as any).id;
     const history = await storage.getTransactionHistory(userId);
     res.json(history);
   });

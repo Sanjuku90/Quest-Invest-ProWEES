@@ -22,11 +22,29 @@ export interface IStorage extends IAuthStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  getUser(id: string): Promise<User | undefined> {
-    return authStorage.getUser(id);
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
-  upsertUser(user: UpsertUser): Promise<User> {
-    return authStorage.upsertUser(user);
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
   }
 
   async getUserBalance(userId: string): Promise<UserBalance> {
@@ -96,7 +114,7 @@ export class DatabaseStorage implements IStorage {
     .where(eq(transactions.status, "pending"))
     .orderBy(desc(transactions.createdAt));
 
-    return results.map(r => ({ ...r.tx, userEmail: r.email || "" }));
+    return results.map(r => ({ ...r.tx, userEmail: r.email }));
   }
 
   async handleTransactionApproval(txId: number, action: "approve" | "reject"): Promise<void> {
